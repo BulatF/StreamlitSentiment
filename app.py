@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch
 import io
 import base64
+from stqdm import stqdm
 
 # Define the model and tokenizer
 model_name = 'nlptown/bert-base-multilingual-uncased-sentiment'
@@ -17,10 +18,16 @@ st.set_page_config(layout="wide")
 
 
 #defs
+
+
 def classify_reviews(reviews):
-    inputs = tokenizer(reviews, return_tensors='pt', truncation=True, padding=True, max_length=512)
-    outputs = model(**inputs)
-    return outputs.logits.tolist()
+    result = []
+    for review in stqdm(reviews, desc="Classifying reviews"):
+        inputs = tokenizer([review], return_tensors='pt', truncation=True, padding=True, max_length=512)
+        outputs = model(**inputs)
+        result.append(outputs.logits.tolist()[0])  # Append the first (and only) element from the list
+    return result
+
 
 def top_rating(scores):
     return scores.index(max(scores)) + 1  # add 1 because star ratings start from 1
