@@ -33,7 +33,7 @@ def get_table_download_link(df):
 
 def main():
     st.title('Sentiment Analysis')
-    st.markdown('Upload an Excel file and select a column to get sentiment analysis.')
+    st.markdown('Upload an Excel file to get sentiment analytics')
 
     file = st.file_uploader("Upload an excel file", type=['xlsx'])
     review_column = None
@@ -42,7 +42,7 @@ def main():
     if file is not None:
         try:
             df = pd.read_excel(file)
-            review_column = st.selectbox('Select the reviews column', df.columns)
+            review_column = st.selectbox('Select the column from your excel file containing text', df.columns)
             df[review_column] = df[review_column].astype(str)
         except Exception as e:
             st.write("An error occurred while reading the uploaded file. Please make sure it's a valid Excel file.")
