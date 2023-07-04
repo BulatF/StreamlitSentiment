@@ -4,3 +4,5 @@ transformers
 torch
 stqdm
 openpyxl
+wordcloud
+matplotlib

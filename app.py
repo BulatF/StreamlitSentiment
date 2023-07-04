@@ -6,6 +6,10 @@ import torch
 import io
 import base64
 from stqdm import stqdm
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 # Define the model and tokenizer
 model_name = 'nlptown/bert-base-multilingual-uncased-sentiment'
@@ -42,6 +46,11 @@ def main():
     if file is not None:
         try:
             df = pd.read_excel(file)
+            # Drop rows where all columns are NaN
+            df = df.dropna(how='all')
+            # Replace blank spaces with NaN, then drop rows where all columns are NaN again
+            df = df.replace(r'^\s*$', np.nan, regex=True)
+            df = df.dropna(how='all')
             review_column = st.selectbox('Select the column from your excel file containing text', df.columns)
             df[review_column] = df[review_column].astype(str)
         except Exception as e:
@@ -51,15 +60,21 @@ def main():
     start_button = st.button('Start Analysis')
 
     if start_button and df is not None:
+        # Drop rows with NaN or blank values in the review_column
+        df = df[df[review_column].notna()]
+        df = df[df[review_column].str.strip() != '']
+
         if review_column in df.columns:
             with st.spinner('Performing sentiment analysis...'):
                 df, df_display = process_reviews(df, review_column)
 
-            display_ratings(df)
+            display_ratings(df, review_column)  # updated this line
             display_dataframe(df, df_display)
         else:
             st.write(f'No column named "{review_column}" found in the uploaded file.')
-            
+
+
+
 
 def process_reviews(df, review_column):
     with st.spinner('Classifying reviews...'):
@@ -92,6 +107,23 @@ def process_reviews(df, review_column):
     df_display = df_display[[review_column, 'Weighted Rating', 'Rating', 'Probability', '1 Star', '2 Star', '3 Star', '4 Star', '5 Star'] + remaining_columns]
 
     return df_new, df_display
+
+def generate_wordclouds(df, review_column):
+    st.markdown("# Word Clouds for each rating category")
+    for i in range(1, 6):
+        # Create a sub-dataframe for each rating category
+        sub_df = df[df['Rating'] == i]
+        # Join all the reviews in this sub-dataframe
+        text = ' '.join(review for review in sub_df[review_column])
+        # Generate a word cloud
+        wordcloud = WordCloud(max_font_size=50, max_words=100, background_color="white").generate(text)
+        # Display the generated image with matplotlib
+        plt.figure()
+        plt.imshow(wordcloud, interpolation="bilinear")
+        plt.axis("off")
+        plt.title(f"Rating {i}")
+        st.pyplot(plt)
+        plt.close()
 
 
 def scores_to_df(df):
@@ -132,13 +164,30 @@ def display_dataframe(df, df_display):
 
     st.dataframe(df_display)
 
-def display_ratings(df):
+def display_ratings(df, review_column):
     cols = st.columns(5)
-
+    
     for i in range(1, 6):
         rating_counts = df[df['Rating'] == i].shape[0]
         cols[i-1].markdown(f"### {rating_counts}")
         cols[i-1].markdown(f"{'⭐' * i}")
+        
+        # Generate wordcloud for the given rating category
+        sub_df = df[df['Rating'] == i]
+        text = ' '.join(review for review in sub_df[review_column])
+        
+        if text.strip():  # Only generate a word cloud if text is not empty
+            wordcloud = WordCloud(max_font_size=50, max_words=100, background_color="white").generate(text)
+            
+            # Display the generated image with matplotlib
+            plt.figure()
+            plt.imshow(wordcloud, interpolation="bilinear")
+            plt.axis("off")
+            plt.title(f"Rating {i}")
+            cols[i-1].pyplot(plt)
+            plt.close()
+
+
 
 
 
